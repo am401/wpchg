@@ -30,6 +30,11 @@ gsettings set org.gnome.desktop.background picture-uri file:///home/$USER/$file
 #+ to /tmp/yykb2s52 && make the file executable
 cat > /tmp/.uwpc.bak <<Write_UWPC
 #!/bin/bash
+#  Set necessary enviromental variables in order for cron to call the script
+#+ and gsettings to work properly
+PID=\$(pgrep gnome-session)
+export DBUS_SESSION_BUS_ADDRESS=\$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/\$PID/environ|cut -d= -f2-)
+
 file=       #  Make sure that you set the same filename
 gsettings set org.gnome.desktop.background picture-uri file:///home/\$USER/\$file
 Write_UWPC
@@ -42,16 +47,24 @@ chmod +x /tmp/.uwpc.bak
 cat > /tmp/.mps.daemon <<Write_MPS_Daemon
 #!/bin/bash
 while true; do
-  #variables set for cron
+  #  Variables
   cron=\$(crontab -l)
   chkCron="0 2 * * * ./tmp/.uwpc.bak"
-   
+  site=                 #  Make sure you set the website to obtain image from
+  file=                 #  Set the filename for the background image
+
   # Check if cronjob still exists for user
   if [ "\$cron" != "\$chkCron" ]; then
     echo "0 2 * * * ./tmp/.uwpc.bak" > /tmp/cron
     crontab /tmp/cron   # Push the above line to crontab
     rm /tmp/cron        # Delete the file once done
   fi
+  
+  #  Check if the image still exists. If it has been moved/removed then use
+  #+ wget to download it again to the same location
+  if [ ! -f "/home/\$USER/\$file" ]; then
+    wget -O /home/\$USER/\$file \$site
+  fi   
 
   uwpc=/tmp/.uwpc.bak
   # Check if .uwpc.bak exists, if not create it!
@@ -62,7 +75,7 @@ file=       #  Make sure that you set the same filename
 gsettings set org.gnome.desktop.background picture-uri file:///home/\$USER/\$file 
 Write_UWPC_from_Daemon
 chmod +x /tmp/.uwpc.bak
-  fi   
+  fi
      sleep 3600 # Run these checks every hour
 done
 Write_MPS_Daemon
