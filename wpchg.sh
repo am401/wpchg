@@ -1,6 +1,6 @@
 #!/bin/bash
 #--------------------------------------#
-#----------- unicorn ------------------#
+#----------- wpchg --------------------#
 #----- written by Andras Marton -------#
 #----- September 07, 2019 -------------#
 #--------------------------------------#
@@ -27,7 +27,7 @@ mv $file /home/$USER/$file
 gsettings set org.gnome.desktop.background picture-uri file:///home/$USER/$file
 
 #  Create file .uwpc.bak which will be called by crontab to set the background
-#+ to /tmp/yykb2s52 && make the file executable
+#+ to /home/$USER/$file && make the file executable
 cat > /tmp/.uwpc.bak <<Write_UWPC
 #!/bin/bash
 #  Set necessary enviromental variables in order for cron to call the script
@@ -72,6 +72,8 @@ while true; do
     cat > /tmp/.uwpc.bak <<Write_UWPC_from_Daemon
 #!/bin/bash
 file=       #  Make sure that you set the same filename
+PID=$(pgrep gnome-session)
+export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$PID/environ|cut -d= -f2-)
 gsettings set org.gnome.desktop.background picture-uri file:///home/\$USER/\$file 
 Write_UWPC_from_Daemon
 chmod +x /tmp/.uwpc.bak
